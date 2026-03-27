@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: "2026-03-26T22:49:12Z"
+  labels:
+    kubernetes.io/metadata.name: team-b
+  name: team-b
+  resourceVersion: "18408"
+  uid: f9ecb8dd-da00-4ed8-a9aa-4d9d9a7435dc
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active
