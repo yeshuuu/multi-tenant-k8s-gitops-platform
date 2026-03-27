@@ -77,10 +77,14 @@ kubectl describe resourcequota -n team-a
 kubectl describe resourcequota -n team-b
 ```
 
-### Restore Team A from backup
+### Restore from backup
 
 ```bash
+# Restore Team A
 kubectl apply -f team-a-backup.yaml
+
+# Restore Team B
+kubectl apply -f team-b-backup.yaml
 ```
 
 ## Resource Quotas
