@@ -10,26 +10,35 @@ This project provisions and manages isolated Kubernetes environments for **Team 
 
 ```
 multi-tenant-k8s-gitops-platform/
-├── ns-team-a.yaml          # Namespace definition for Team A
-├── ns-team-b.yaml          # Namespace definition for Team B
-├── team-a-quota.yaml       # ResourceQuota for Team A namespace
-├── team-b-quota.yaml       # ResourceQuota for Team B namespace
-├── team-a-role.yaml        # RBAC Role for Team A
-├── team-b-role.yaml        # RBAC Role for Team B
-├── team-a-binding.yaml     # RoleBinding for Team A
-├── team-b-binding.yaml     # RoleBinding for Team B
-├── team-a-deploy.yaml      # Nginx Deployment for Team A (2 replicas)
-├── team-b-deploy.yaml      # Nginx Deployment for Team B (2 replicas)
-├── team-a-backup.yaml      # Backup snapshot of Team A resources
-└── team-b-backup.yaml      # Backup snapshot of Team B resources
+├── day1-multi-tenant/              # Core manifests organized by team
+│   ├── team-a/
+│   │   ├── namespace.yaml          # Namespace: team-a
+│   │   ├── resourcequota.yaml      # Namespace-level resource limits
+│   │   ├── role.yaml               # RBAC Role scoped to team-a
+│   │   ├── rolebinding.yaml        # Binds team-a-role → team-a-user
+│   │   ├── deployment.yaml         # nginx-app Deployment (2 replicas)
+│   │   └── service.yaml            # ClusterIP Service for nginx-app
+│   └── team-b/
+│       ├── namespace.yaml          # Namespace: team-b
+│       ├── resourcequota.yaml      # Namespace-level resource limits
+│       ├── role.yaml               # RBAC Role scoped to team-b
+│       ├── rolebinding.yaml        # Binds team-b-role → team-b-user
+│       ├── deployment.yaml         # nginx-app Deployment (2 replicas)
+│       └── service.yaml            # ClusterIP Service for nginx-app
+├── backups/
+│   ├── team-a-backup.yaml          # Live snapshot: kubectl get all -n team-a -o yaml
+│   └── team-b-backup.yaml          # Live snapshot: kubectl get all -n team-b -o yaml
+├── .gitignore
+└── README.md
 ```
 
 ## Features
 
 - **Namespace Isolation** — Each team operates in a dedicated Kubernetes namespace (`team-a`, `team-b`)
-- **Resource Quotas** — CPU and memory limits enforced per namespace to prevent resource starvation
+- **Resource Quotas** — CPU and memory limits enforced at the namespace level
 - **RBAC** — Least-privilege roles and bindings scoped per team namespace
-- **Workload Management** — Nginx deployments with defined resource requests and limits (CPU: 100m–300m, Memory: 128Mi–256Mi)
+- **Workload Management** — Nginx deployments with resource requests/limits and ClusterIP services
+- **Backup Snapshots** — Live `kubectl` state snapshots stored per team for recovery
 - **GitOps Workflow** — All cluster state is declared as YAML manifests and version-controlled in Git
 
 ## Prerequisites
@@ -40,32 +49,31 @@ multi-tenant-k8s-gitops-platform/
 
 ## Usage
 
-### Apply all manifests for both teams
+### Apply all manifests for a team
 
 ```bash
-# Create namespaces first
-kubectl apply -f ns-team-a.yaml
-kubectl apply -f ns-team-b.yaml
+# Apply everything for Team A (in dependency order)
+kubectl apply -f day1-multi-tenant/team-a/namespace.yaml
+kubectl apply -f day1-multi-tenant/team-a/resourcequota.yaml
+kubectl apply -f day1-multi-tenant/team-a/role.yaml
+kubectl apply -f day1-multi-tenant/team-a/rolebinding.yaml
+kubectl apply -f day1-multi-tenant/team-a/deployment.yaml
+kubectl apply -f day1-multi-tenant/team-a/service.yaml
 
-# Apply resource quotas
-kubectl apply -f team-a-quota.yaml
-kubectl apply -f team-b-quota.yaml
-
-# Apply RBAC roles and bindings
-kubectl apply -f team-a-role.yaml
-kubectl apply -f team-a-binding.yaml
-kubectl apply -f team-b-role.yaml
-kubectl apply -f team-b-binding.yaml
-
-# Deploy workloads
-kubectl apply -f team-a-deploy.yaml
-kubectl apply -f team-b-deploy.yaml
+# Apply everything for Team B
+kubectl apply -f day1-multi-tenant/team-b/namespace.yaml
+kubectl apply -f day1-multi-tenant/team-b/resourcequota.yaml
+kubectl apply -f day1-multi-tenant/team-b/role.yaml
+kubectl apply -f day1-multi-tenant/team-b/rolebinding.yaml
+kubectl apply -f day1-multi-tenant/team-b/deployment.yaml
+kubectl apply -f day1-multi-tenant/team-b/service.yaml
 ```
 
-### Apply everything at once
+### Apply an entire team at once
 
 ```bash
-kubectl apply -f .
+kubectl apply -f day1-multi-tenant/team-a/
+kubectl apply -f day1-multi-tenant/team-b/
 ```
 
 ### Verify deployments
@@ -81,23 +89,23 @@ kubectl describe resourcequota -n team-b
 
 ```bash
 # Restore Team A
-kubectl apply -f team-a-backup.yaml
+kubectl apply -f backups/team-a-backup.yaml
 
 # Restore Team B
-kubectl apply -f team-b-backup.yaml
+kubectl apply -f backups/team-b-backup.yaml
 ```
 
 ## Resource Quotas
 
 Both teams share the same namespace-level quota limits:
 
-| Quota Field       | Team A  | Team B  |
-|-------------------|---------|---------|
-| Max Pods          | 4       | 4       |
-| CPU Requests      | 1 core  | 1 core  |
-| CPU Limits        | 2 cores | 2 cores |
-| Memory Requests   | 1Gi     | 1Gi     |
-| Memory Limits     | 2Gi     | 2Gi     |
+| Quota Field     | Team A  | Team B  |
+|-----------------|---------|---------|
+| Max Pods        | 4       | 4       |
+| CPU Requests    | 1 core  | 1 core  |
+| CPU Limits      | 2 cores | 2 cores |
+| Memory Requests | 1Gi     | 1Gi     |
+| Memory Limits   | 2Gi     | 2Gi     |
 
 > Per-pod resource requests: `cpu: 100m`, `memory: 128Mi` · limits: `cpu: 300m`, `memory: 256Mi`
 
@@ -105,10 +113,10 @@ Both teams share the same namespace-level quota limits:
 
 Both teams have equivalent roles scoped strictly to their own namespace:
 
-| Permission  | Resources                        | Verbs                        |
-|-------------|----------------------------------|------------------------------|
-| Team A Role | pods, deployments, services      | get, list, create, delete    |
-| Team B Role | pods, deployments, services      | get, list, create, delete    |
+| Permission  | Resources                   | Verbs                     |
+|-------------|-----------------------------|---------------------------|
+| Team A Role | pods, deployments, services | get, list, create, delete |
+| Team B Role | pods, deployments, services | get, list, create, delete |
 
 - Subjects are bound via `RoleBinding` to `team-a-user` and `team-b-user` respectively
 - Cross-namespace access is not permitted
@@ -118,13 +126,15 @@ Both teams have equivalent roles scoped strictly to their own namespace:
 ```
 EKS Cluster
 ├── Namespace: team-a
-│   ├── ResourceQuota
-│   ├── Role + RoleBinding
-│   └── Deployment: nginx-app (2 replicas)
+│   ├── ResourceQuota    (pods: 4, cpu: 1-2 cores, mem: 1-2Gi)
+│   ├── Role + RoleBinding → team-a-user
+│   ├── Deployment: nginx-app (2 replicas)
+│   └── Service: nginx-service (ClusterIP :80)
 └── Namespace: team-b
-    ├── ResourceQuota
-    ├── Role + RoleBinding
-    └── Deployment: nginx-app (2 replicas)
+    ├── ResourceQuota    (pods: 4, cpu: 1-2 cores, mem: 1-2Gi)
+    ├── Role + RoleBinding → team-b-user
+    ├── Deployment: nginx-app (2 replicas)
+    └── Service: nginx-service (ClusterIP :80)
 ```
 
 ## License
