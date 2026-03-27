@@ -20,7 +20,8 @@ multi-tenant-k8s-gitops-platform/
 ├── team-b-binding.yaml     # RoleBinding for Team B
 ├── team-a-deploy.yaml      # Nginx Deployment for Team A (2 replicas)
 ├── team-b-deploy.yaml      # Nginx Deployment for Team B (2 replicas)
-└── team-a-backup.yaml      # Backup snapshot of Team A resources
+├── team-a-backup.yaml      # Backup snapshot of Team A resources
+└── team-b-backup.yaml      # Backup snapshot of Team B resources
 ```
 
 ## Features
