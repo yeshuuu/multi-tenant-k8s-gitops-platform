@@ -1,6 +1,6 @@
 # Multi-Tenant Kubernetes GitOps Platform
 
-A GitOps-based Kubernetes platform that demonstrates multi-tenancy using namespaces, RBAC, resource quotas, and workload isolation for multiple teams on a shared EKS cluster.
+A GitOps-based Kubernetes platform demonstrating multi-tenancy using namespaces, RBAC, resource quotas, workload isolation, and backup snapshots for multiple teams on a shared EKS cluster.
 
 ## Overview
 
@@ -89,15 +89,29 @@ kubectl apply -f team-b-backup.yaml
 
 ## Resource Quotas
 
-| Team   | CPU Request | CPU Limit | Memory Request | Memory Limit |
-|--------|-------------|-----------|----------------|--------------|
-| Team A | 100m/pod    | 300m/pod  | 128Mi/pod      | 256Mi/pod    |
-| Team B | 100m/pod    | 300m/pod  | 128Mi/pod      | 256Mi/pod    |
+Both teams share the same namespace-level quota limits:
+
+| Quota Field       | Team A  | Team B  |
+|-------------------|---------|---------|
+| Max Pods          | 4       | 4       |
+| CPU Requests      | 1 core  | 1 core  |
+| CPU Limits        | 2 cores | 2 cores |
+| Memory Requests   | 1Gi     | 1Gi     |
+| Memory Limits     | 2Gi     | 2Gi     |
+
+> Per-pod resource requests: `cpu: 100m`, `memory: 128Mi` · limits: `cpu: 300m`, `memory: 256Mi`
 
 ## RBAC Summary
 
-- **Team A** — Full role with permissions scoped to the `team-a` namespace (pods, deployments, services, configmaps, etc.)
-- **Team B** — Restricted role scoped to the `team-b` namespace
+Both teams have equivalent roles scoped strictly to their own namespace:
+
+| Permission  | Resources                        | Verbs                        |
+|-------------|----------------------------------|------------------------------|
+| Team A Role | pods, deployments, services      | get, list, create, delete    |
+| Team B Role | pods, deployments, services      | get, list, create, delete    |
+
+- Subjects are bound via `RoleBinding` to `team-a-user` and `team-b-user` respectively
+- Cross-namespace access is not permitted
 
 ## Architecture
 
