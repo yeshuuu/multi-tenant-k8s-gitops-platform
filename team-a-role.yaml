@@ -1,10 +1,29 @@
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+apiVersion: v1
+items:
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"annotations":{},"name":"team-a-role","namespace":"team-a"},"rules":[{"apiGroups":["","apps"],"resources":["pods","deployments","services"],"verbs":["get","list","create","delete"]}]}
+    creationTimestamp: "2026-03-26T23:00:10Z"
+    name: team-a-role
+    namespace: team-a
+    resourceVersion: "20131"
+    uid: a04d127e-a13d-410c-ba50-ae3edba100ef
+  rules:
+  - apiGroups:
+    - ""
+    - apps
+    resources:
+    - pods
+    - deployments
+    - services
+    verbs:
+    - get
+    - list
+    - create
+    - delete
+kind: List
 metadata:
-  namespace: team-a
-  name: team-a-role
-rules:
-- apiGroups: ["", "apps"]
-  resources: ["pods", "deployments", "services"]
-  verbs: ["get", "list", "create", "delete"]
-  
+  resourceVersion: ""
